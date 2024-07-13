@@ -5,281 +5,130 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Werbekostenzuschuss Verwaltung</title>
     <style>
-        /* Ihr bestehender CSS-Code */
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .tabs {
+            display: flex;
+            cursor: pointer;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+        }
+        .tab.active {
+            background-color: #ccc;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border-top: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        .unpaid {
+            background-color: red;
+        }
+        .paid {
+            background-color: green;
+        }
+        .blue {
+            color: blue;
+        }
+        .red {
+            color: red;
+        }
+        .green {
+            color: green;
+        }
+        .toggle-row {
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+        }
+        .hidden-row {
+            display: none;
+        }
+        .form-container {
+            display: flex;
+            justify-content: space-between;
+        }
+        .form-column {
+            width: 45%;
+        }
+        .icon-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin: 0 5px;
+            color: blue;
+            display: inline-flex;
+            align-items: center;
+            font-size: 1.2em;
+        }
+        .icon-button:hover {
+            color: lightblue;
+        }
+        .icon-button:focus {
+            outline: none;
+        }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid black;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        .popup.active {
+            display: block;
+        }
+        .highlight {
+            border: 2px solid red;
+        }
+        .info-button {
+            background-color: blue;
+            border: none;
+            border-radius: 21px;
+            color: white;
+            font-size: 1em;
+            padding: 0.2em 0.5em;
+            cursor: pointer;
+        }
+        .info-button:hover {
+            background-color: lightblue;
+        }
+        .info-button.yellow {
+            background-color: yellow;
+            color: black;
+        }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
-    <!-- Firebase App (core Firebase SDK) -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <!-- Add Firebase products that you want to use -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-</head>
-<body>
-    <h1>Werbekostenzuschuss Verwaltung</h1>
-    <div class="tabs">
-        <div class="tab active" onclick="showTabContent('tab-1')">WKZ Eintragungen & Archive</div>
-        <div class="tab" onclick="showTabContent('tab-2')">Übersicht WKZ Verbrauch</div>
-    </div>
-    <div id="tab-1" class="tab-content active">
-        <div class="form-container">
-            <div class="form-column">
-                <h2>WKZ Eintrag</h2>
-                <form id="wkz-form">
-                    <label for="manufacturer_name">Herstellername:</label>
-                    <input type="text" id="manufacturer_name" name="manufacturer_name" list="manufacturer-suggestions" required><br><br>
-                    <datalist id="manufacturer-suggestions"></datalist>
-                    
-                    <label for="year">Jahr:</label>
-                    <input type="number" id="year" name="year" required min="2000" max="2100" value="2024"><br><br>
-                    
-                    <label for="period_type">Art des WKZ:</label>
-                    <select id="period_type" name="period_type" required onchange="toggleQuarterSelection()">
-                        <option value="yearly">Jährlich</option>
-                        <option value="quarterly">Quartalsweise</option>
-                        <option value="special">Sonstiges</option>
-                    </select><br><br>
-
-                    <div id="quarter-selection" style="display:none;">
-                        <label for="quarter">Quartal:</label>
-                        <select id="quarter" name="quarter">
-                            <option value="Q1">Q1</option>
-                            <option value="Q2">Q2</option>
-                            <option value="Q3">Q3</option>
-                            <option value="Q4">Q4</option>
-                        </select><br><br>
-                    </div>
-
-                    <div id="wkz-name-container" style="display:none;">
-                        <label for="wkz_name">Bezeichnung des WKZ:</label>
-                        <input type="text" id="wkz_name" name="wkz_name"><br><br>
-                    </div>
-
-                    <label for="period_value">WKZ Betrag:</label>
-                    <input type="number" id="period_value" name="period_value" required><br><br>
-                    
-                    <button type="button" id="wkz-submit-button" onclick="addWkz()">WKZ eintragen</button>
-                </form>
-            </div>
-            <div class="form-column">
-                <h2>Leistung Eintrag</h2>
-                <form id="wkz-entry-form">
-                    <label for="manufacturer">Hersteller:</label>
-                    <select id="manufacturer" name="manufacturer" onchange="updateWkzSelect()" required></select><br><br>
-
-                    <label for="wkz_select">WKZ wählen:</label>
-                    <select id="wkz_select" name="wkz_select" required>
-                        <option value="" disabled selected>WKZ auswählen</option>
-                    </select><br><br>
-                    
-                    <label for="entry_title">Titel der Leistung:</label>
-                    <input type="text" id="entry_title" name="entry_title" required><br><br>
-                    
-                    <label for="entry_date">Datum der Leistung:</label>
-                    <input type="date" id="entry_date" name="entry_date" required><br><br>
-                    
-                    <label for="entry_amount">Betrag:</label>
-                    <input type="number" id="entry_amount" name="entry_amount" required><br><br>
-
-                    <label for="payment_method">Zahlungsmethode:</label>
-                    <select id="payment_method" name="payment_method" required onchange="toggleCustomPayment()">
-                        <option value="Rechnung">Rechnung</option>
-                        <option value="Gutschrift">Gutschrift</option>
-                        <option value="Warenausgleich">Warenausgleich</option>
-                        <option value="Sonstiges">Sonstiges</option>
-                    </select><br><br>
-
-                    <div id="custom-payment-container" style="display:none;">
-                        <label for="custom_payment">Bezeichnung der Zahlungsmethode:</label>
-                        <input type="text" id="custom_payment" name="custom_payment"><br><br>
-                    </div>
-                    
-                    <button type="button" onclick="addWkzEntry()">Leistung eintragen</button>
-                </form>
-            </div>
-        </div>
-
-        <h2>Eingetragene Leistungen <button type="button" onclick="showEditPopup()">WKZ bearbeiten</button></h2>
-        <div class="filter-container">
-            <div>
-                <label for="wkz_filter_year">Jahr:</label>
-                <input type="number" id="wkz_filter_year" min="2000" max="2100" value="2024">
-                <label for="wkz_filter_manufacturer">Hersteller:</label>
-                <select id="wkz_filter_manufacturer">
-                    <option value="all">Alle</option>
-                </select>
-                <label for="entries_per_page">Einträge pro Seite:</label>
-                <input type="number" id="entries_per_page" value="10" min="1" max="100">
-                <label for="sort_entries">Sortieren nach:</label>
-                <select id="sort_entries" onchange="sortWkzEntries()">
-                    <option value="date_desc">Zuletzt hinzugefügt oben</option>
-                    <option value="date_asc">Zuletzt hinzugefügt unten</option>
-                    <option value="manufacturer">Hersteller</option>
-                    <option value="paid">Bezahlt</option>
-                    <option value="unpaid">Nicht bezahlt</option>
-                </select>
-            </div>
-            <div>
-                <button type="button" onclick="filterWkzEntries()">Filtern</button>
-                <button type="button" onclick="resetWkzFilter()">Filter löschen</button>
-            </div>
-        </div>
-        <table id="wkz-table">
-            <thead>
-                <tr>
-                    <th>Hersteller</th>
-                    <th>Jahr</th>
-                    <th>WKZ Art</th>
-                    <th>WKZ Name</th>
-                    <th>Titel der Leistung</th>
-                    <th>Datum der Leistung</th>
-                    <th>Betrag</th>
-                    <th>Rechnung bezahlt</th>
-                    <th>Zahlungsmethode</th>
-                    <th>Aktionen</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- WKZ Eintragungen werden hier hinzugefügt -->
-            </tbody>
-        </table>
-        <div id="pagination"></div>
-        
-        <h2>Gelöschte Leistungen</h2>
-        <div id="archive"></div>
-    </div>
-
-    <div id="tab-2" class="tab-content">
-        <h2>Übersicht WKZ Verbrauch</h2>
-        <div class="filter-container">
-            <div>
-                <label for="wkz_filter_overview_year">Jahr:</label>
-                <input type="number" id="wkz_filter_overview_year" min="2000" max="2100" value="2024">
-                <label for="wkz_filter_overview_manufacturer">Hersteller:</label>
-                <select id="wkz_filter_overview_manufacturer">
-                    <option value="all">Alle</option>
-                </select>
-                <label for="overview_entries_per_page">Einträge pro Seite:</label>
-                <input type="number" id="overview_entries_per_page" value="10" min="1" max="100">
-                <label for="sort_overview">Sortieren nach:</label>
-                <select id="sort_overview" onchange="sortWkzOverview()">
-                    <option value="date_desc">Zuletzt hinzugefügt oben</option>
-                    <option value="date_asc">Zuletzt hinzugefügt unten</option>
-                    <option value="manufacturer">Hersteller</option>
-                </select>
-            </div>
-            <div>
-                <button type="button" onclick="updateWkzOverview()">Aktualisieren</button>
-                <button type="button" onclick="resetWkzOverviewFilter()">Filter löschen</button>
-            </div>
-        </div>
-        <table id="wkz-overview-table">
-            <thead>
-                <tr>
-                    <th>Hersteller</th>
-                    <th>Jahr</th>
-                    <th>WKZ Art</th>
-                    <th class="blue">WKZ Betrag</th>
-                    <th class="green">Verbrauchtes WKZ</th>
-                    <th class="red">Verfügbares WKZ</th>
-                    <th>Notizen</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- WKZ Übersicht wird hier angezeigt -->
-            </tbody>
-        </table>
-        <div id="pagination-overview"></div>
-        <div id="chart-container" style="width: 80%; margin: auto;">
-            <canvas id="stackedBarChart"></canvas>
-        </div>
-    </div>
-
-    <div id="edit-popup" class="popup">
-        <h2>WKZ-Modell bearbeiten</h2>
-        <label for="edit-search">Suchen:</label>
-        <input type="text" id="edit-search" oninput="searchWkzModels()">
-        <table id="edit-wkz-table">
-            <thead>
-                <tr>
-                    <th>Hersteller</th>
-                    <th>Jahr</th>
-                    <th>WKZ Art</th>
-                    <th>WKZ Name</th>
-                    <th>WKZ Betrag</th>
-                    <th>Quartal</th>
-                    <th>Aktionen</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- WKZ Modelle werden hier hinzugefügt -->
-            </tbody>
-        </table>
-        <button type="button" onclick="closeEditPopup()">Schließen</button>
-    </div>
-
-    <div id="confirm-popup" class="popup">
-        <h2>Bestätigung</h2>
-        <p id="confirm-message"></p>
-        <button type="button" onclick="confirmChangeStatus()">Ja</button>
-        <button type="button" onclick="closeConfirmPopup()">Nein</button>
-    </div>
-
-    <div id="edit-wkz-model-popup" class="popup">
-        <h2>WKZ-Modell bearbeiten</h2>
-        <form id="edit-wkz-form">
-            <label for="edit-manufacturer">Herstellername:</label>
-            <input type="text" id="edit-manufacturer" name="edit-manufacturer" readonly><br><br>
-            
-            <label for="edit-year">Jahr:</label>
-            <input type="number" id="edit-year" name="edit-year" readonly><br><br>
-            
-            <label for="edit-period_type">Art des WKZ:</label>
-            <select id="edit-period_type" name="edit-period_type" onchange="toggleEditQuarterSelection()">
-                <option value="yearly">Jährlich</option>
-                <option value="quarterly">Quartalsweise</option>
-                <option value="special">Sonstiges</option>
-            </select><br><br>
-
-            <div id="edit-quarter-selection" style="display:none;">
-                <label for="edit-quarter">Quartal:</label>
-                <select id="edit-quarter" name="edit-quarter">
-                    <option value="Q1">Q1</option>
-                    <option value="Q2">Q2</option>
-                    <option value="Q3">Q3</option>
-                    <option value="Q4">Q4</option>
-                </select><br><br>
-            </div>
-
-            <div id="edit-wkz-name-container" style="display:none;">
-                <label for="edit-wkz_name">Bezeichnung des WKZ:</label>
-                <input type="text" id="edit-wkz_name" name="edit-wkz_name"><br><br>
-            </div>
-
-            <label for="edit-period_value">WKZ Betrag:</label>
-            <input type="number" id="edit-period_value" name="edit-period_value" required><br><br>
-            
-            <button type="button" onclick="saveWkzModel()">Speichern</button>
-            <button type="button" onclick="closeEditWkzModelPopup()">Schließen</button>
-        </form>
-    </div>
-
-    <div id="delete-confirm-popup" class="popup">
-        <h2>Bestätigung</h2>
-        <p id="delete-confirm-message"></p>
-        <button type="button" onclick="confirmDeleteWkzModel()">Ja</button>
-        <button type="button" onclick="closeDeleteConfirmPopup()">Nein</button>
-    </div>
-
-    <div id="notes-popup" class="popup">
-        <h2>Notizen</h2>
-        <textarea id="notes-textarea" rows="10" cols="30"></textarea><br><br>
-        <button type="button" onclick="saveNotes()">Speichern</button>
-        <button type="button" onclick="closeNotesPopup()">Schließen</button>
-    </div>
-
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
     <script>
-        // Firebase-Konfiguration
+        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDEBclnXkB0kenNN9pXnvitcR2pWbRPozU",
             authDomain: "wkz-verwaltung.firebaseapp.com",
@@ -291,28 +140,19 @@
         };
 
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
+        const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Daten abrufen
-        function fetchWkzEntries() {
-            db.collection("wkzEntries").doc("QjZq3rpEamt5iaaGFJW8")
-                .get()
-                .then((doc) => {
-                    if (doc.exists) {
-                        wkzEntries = doc.data().entries;
-                        updateWkzTable();
-                    } else {
-                        console.error("No such document!");
-                    }
-                })
-                .catch((error) => {
-                    console.error("Error getting document:", error);
-                });
-        }
+        let wkzData = {};
+        let wkzEntries = [];
+        let archivedWkzEntries = [];
+        let paymentStatuses = {};
+        let currentEntry = null;
+        let currentEditModel = null;
+        let currentNotesTarget = null;
+        let editingMode = false;
 
-        // Daten speichern
-        function addWkz() {
+        async function addWkz() {
             const manufacturerName = document.getElementById('manufacturer_name').value;
             const year = document.getElementById('year').value;
             const periodType = document.getElementById('period_type').value;
@@ -342,11 +182,11 @@
                 if (!wkzData[manufacturerName]) {
                     wkzData[manufacturerName] = {};
                 }
-    
+
                 if (!wkzData[manufacturerName][year]) {
                     wkzData[manufacturerName][year] = [];
                 }
-    
+
                 wkzData[manufacturerName][year].push({
                     name: wkzName,
                     type: periodType,
@@ -355,17 +195,20 @@
                 });
             }
 
-            db.collection("wkzEntries").doc("TcCxQOk1JPzAGb7cr9ci").set({
-                entries: wkzEntries
-            })
-            .then(() => {
-                console.log("Document successfully written!");
-                updateWkzTable();
+            try {
+                await db.collection('wkzModels').add({
+                    manufacturer: manufacturerName,
+                    year: year,
+                    type: periodType,
+                    name: wkzName,
+                    value: periodValue,
+                    quarter: quarter
+                });
                 alert('WKZ erfolgreich eingetragen!');
-            })
-            .catch((error) => {
-                console.error("Error writing document: ", error);
-            });
+            } catch (error) {
+                console.error('Fehler beim Hinzufügen des WKZ:', error);
+                alert('Fehler beim Hinzufügen des WKZ.');
+            }
 
             updateManufacturerFilter();
             updateWkzSelect();
@@ -375,49 +218,15 @@
             updateManufacturerSuggestions();
         }
 
-        let wkzEntries = [];
-        let archivedWkzEntries = [];
-        let paymentStatuses = {};
-        let currentEntry = null;
-        let currentEditModel = null;
-        let currentNotesTarget = null;
-        let editingMode = false;
-
-        function addWkzEntry() {
-            const manufacturer = document.getElementById('manufacturer').value;
-            const wkzSelect = document.getElementById('wkz_select').value;
-            const [wkzName, year, periodType, quarter] = wkzSelect.split(' - ');
-            const entryTitle = document.getElementById('entry_title').value;
-            const entryDate = document.getElementById('entry_date').value;
-            const entryAmount = parseFloat(document.getElementById('entry_amount').value);
-            const paymentMethod = document.getElementById('payment_method').value;
-            const customPayment = document.getElementById('custom_payment').value;
-
-            if (!manufacturer || !wkzSelect || !entryTitle || !entryDate || !entryAmount) {
-                alert("Bitte füllen Sie alle Pflichtfelder aus.");
-                return;
+        async function fetchWkzEntries() {
+            try {
+                const snapshot = await db.collection('wkzEntries').get();
+                wkzEntries = snapshot.docs.map(doc => doc.data());
+                updateWkzTable();
+                updateWkzOverviewTable();
+            } catch (error) {
+                console.error('Fehler beim Abrufen der WKZ-Einträge:', error);
             }
-
-            const entry = {
-                manufacturer,
-                year,
-                periodType,
-                wkzName,
-                title: entryTitle,
-                date: entryDate,
-                amount: entryAmount,
-                paymentStatus: 'unpaid',
-                paymentMethod: paymentMethod === 'Sonstiges' ? customPayment : paymentMethod,
-                quarter: periodType === 'quarterly' ? quarter : null
-            };
-
-            wkzEntries.unshift(entry);
-            paymentStatuses[entry.manufacturer + entry.date] = 'unpaid';
-
-            updateWkzTable();
-            updateWkzOverviewTable();
-            alert('Leistung erfolgreich eingetragen!');
-            document.getElementById('wkz-entry-form').reset();
         }
 
         function updateManufacturerFilter() {
@@ -1150,11 +959,278 @@
             });
         }
 
-        updateManufacturerFilter();
-        updateWkzTable();
-        updateWkzOverviewTable();
-        updateManufacturerSuggestions();
+        // Initialize functions on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchWkzEntries();
+            updateManufacturerFilter();
+            updateWkzTable();
+            updateWkzOverviewTable();
+            updateManufacturerSuggestions();
+        });
     </script>
+</head>
+<body>
+    <h1>Werbekostenzuschuss Verwaltung</h1>
+    <div class="tabs">
+        <div class="tab active" onclick="showTabContent('tab-1')">WKZ Eintragungen & Archive</div>
+        <div class="tab" onclick="showTabContent('tab-2')">Übersicht WKZ Verbrauch</div>
+    </div>
+    <div id="tab-1" class="tab-content active">
+        <div class="form-container">
+            <div class="form-column">
+                <h2>WKZ Eintrag</h2>
+                <form id="wkz-form">
+                    <label for="manufacturer_name">Herstellername:</label>
+                    <input type="text" id="manufacturer_name" name="manufacturer_name" list="manufacturer-suggestions" required><br><br>
+                    <datalist id="manufacturer-suggestions"></datalist>
+                    
+                    <label for="year">Jahr:</label>
+                    <input type="number" id="year" name="year" required min="2000" max="2100" value="2024"><br><br>
+                    
+                    <label for="period_type">Art des WKZ:</label>
+                    <select id="period_type" name="period_type" required onchange="toggleQuarterSelection()">
+                        <option value="yearly">Jährlich</option>
+                        <option value="quarterly">Quartalsweise</option>
+                        <option value="special">Sonstiges</option>
+                    </select><br><br>
+
+                    <div id="quarter-selection" style="display:none;">
+                        <label for="quarter">Quartal:</label>
+                        <select id="quarter" name="quarter">
+                            <option value="Q1">Q1</option>
+                            <option value="Q2">Q2</option>
+                            <option value="Q3">Q3</option>
+                            <option value="Q4">Q4</option>
+                        </select><br><br>
+                    </div>
+
+                    <div id="wkz-name-container" style="display:none;">
+                        <label for="wkz_name">Bezeichnung des WKZ:</label>
+                        <input type="text" id="wkz_name" name="wkz_name"><br><br>
+                    </div>
+
+                    <label for="period_value">WKZ Betrag:</label>
+                    <input type="number" id="period_value" name="period_value" required><br><br>
+                    
+                    <button type="button" id="wkz-submit-button" onclick="addWkz()">WKZ eintragen</button>
+                </form>
+            </div>
+            <div class="form-column">
+                <h2>Leistung Eintrag</h2>
+                <form id="wkz-entry-form">
+                    <label for="manufacturer">Hersteller:</label>
+                    <select id="manufacturer" name="manufacturer" onchange="updateWkzSelect()" required></select><br><br>
+
+                    <label for="wkz_select">WKZ wählen:</label>
+                    <select id="wkz_select" name="wkz_select" required>
+                        <option value="" disabled selected>WKZ auswählen</option>
+                    </select><br><br>
+                    
+                    <label for="entry_title">Titel der Leistung:</label>
+                    <input type="text" id="entry_title" name="entry_title" required><br><br>
+                    
+                    <label for="entry_date">Datum der Leistung:</label>
+                    <input type="date" id="entry_date" name="entry_date" required><br><br>
+                    
+                    <label for="entry_amount">Betrag:</label>
+                    <input type="number" id="entry_amount" name="entry_amount" required><br><br>
+
+                    <label for="payment_method">Zahlungsmethode:</label>
+                    <select id="payment_method" name="payment_method" required onchange="toggleCustomPayment()">
+                        <option value="Rechnung">Rechnung</option>
+                        <option value="Gutschrift">Gutschrift</option>
+                        <option value="Warenausgleich">Warenausgleich</option>
+                        <option value="Sonstiges">Sonstiges</option>
+                    </select><br><br>
+
+                    <div id="custom-payment-container" style="display:none;">
+                        <label for="custom_payment">Bezeichnung der Zahlungsmethode:</label>
+                        <input type="text" id="custom_payment" name="custom_payment"><br><br>
+                    </div>
+                    
+                    <button type="button" onclick="addWkzEntry()">Leistung eintragen</button>
+                </form>
+            </div>
+        </div>
+
+        <h2>Eingetragene Leistungen <button type="button" onclick="showEditPopup()">WKZ bearbeiten</button></h2>
+        <div class="filter-container">
+            <div>
+                <label for="wkz_filter_year">Jahr:</label>
+                <input type="number" id="wkz_filter_year" min="2000" max="2100" value="2024">
+                <label for="wkz_filter_manufacturer">Hersteller:</label>
+                <select id="wkz_filter_manufacturer">
+                    <option value="all">Alle</option>
+                </select>
+                <label for="entries_per_page">Einträge pro Seite:</label>
+                <input type="number" id="entries_per_page" value="10" min="1" max="100">
+                <label for="sort_entries">Sortieren nach:</label>
+                <select id="sort_entries" onchange="sortWkzEntries()">
+                    <option value="date_desc">Zuletzt hinzugefügt oben</option>
+                    <option value="date_asc">Zuletzt hinzugefügt unten</option>
+                    <option value="manufacturer">Hersteller</option>
+                    <option value="paid">Bezahlt</option>
+                    <option value="unpaid">Nicht bezahlt</option>
+                </select>
+            </div>
+            <div>
+                <button type="button" onclick="filterWkzEntries()">Filtern</button>
+                <button type="button" onclick="resetWkzFilter()">Filter löschen</button>
+            </div>
+        </div>
+        <table id="wkz-table">
+            <thead>
+                <tr>
+                    <th>Hersteller</th>
+                    <th>Jahr</th>
+                    <th>WKZ Art</th>
+                    <th>WKZ Name</th>
+                    <th>Titel der Leistung</th>
+                    <th>Datum der Leistung</th>
+                    <th>Betrag</th>
+                    <th>Rechnung bezahlt</th>
+                    <th>Zahlungsmethode</th>
+                    <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- WKZ Eintragungen werden hier hinzugefügt -->
+            </tbody>
+        </table>
+        <div id="pagination"></div>
+        
+        <h2>Gelöschte Leistungen</h2>
+        <div id="archive"></div>
+    </div>
+
+    <div id="tab-2" class="tab-content">
+        <h2>Übersicht WKZ Verbrauch</h2>
+        <div class="filter-container">
+            <div>
+                <label for="wkz_filter_overview_year">Jahr:</label>
+                <input type="number" id="wkz_filter_overview_year" min="2000" max="2100" value="2024">
+                <label for="wkz_filter_overview_manufacturer">Hersteller:</label>
+                <select id="wkz_filter_overview_manufacturer">
+                    <option value="all">Alle</option>
+                </select>
+                <label for="overview_entries_per_page">Einträge pro Seite:</label>
+                <input type="number" id="overview_entries_per_page" value="10" min="1" max="100">
+                <label for="sort_overview">Sortieren nach:</label>
+                <select id="sort_overview" onchange="sortWkzOverview()">
+                    <option value="date_desc">Zuletzt hinzugefügt oben</option>
+                    <option value="date_asc">Zuletzt hinzugefügt unten</option>
+                    <option value="manufacturer">Hersteller</option>
+                </select>
+            </div>
+            <div>
+                <button type="button" onclick="updateWkzOverview()">Aktualisieren</button>
+                <button type="button" onclick="resetWkzOverviewFilter()">Filter löschen</button>
+            </div>
+        </div>
+        <table id="wkz-overview-table">
+            <thead>
+                <tr>
+                    <th>Hersteller</th>
+                    <th>Jahr</th>
+                    <th>WKZ Art</th>
+                    <th class="blue">WKZ Betrag</th>
+                    <th class="green">Verbrauchtes WKZ</th>
+                    <th class="red">Verfügbares WKZ</th>
+                    <th>Notizen</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- WKZ Übersicht wird hier angezeigt -->
+            </tbody>
+        </table>
+        <div id="pagination-overview"></div>
+        <div id="chart-container" style="width: 80%; margin: auto;">
+            <canvas id="stackedBarChart"></canvas>
+        </div>
+    </div>
+
+    <div id="edit-popup" class="popup">
+        <h2>WKZ-Modell bearbeiten</h2>
+        <label for="edit-search">Suchen:</label>
+        <input type="text" id="edit-search" oninput="searchWkzModels()">
+        <table id="edit-wkz-table">
+            <thead>
+                <tr>
+                    <th>Hersteller</th>
+                    <th>Jahr</th>
+                    <th>WKZ Art</th>
+                    <th>WKZ Name</th>
+                    <th>WKZ Betrag</th>
+                    <th>Quartal</th>
+                    <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- WKZ Modelle werden hier hinzugefügt -->
+            </tbody>
+        </table>
+        <button type="button" onclick="closeEditPopup()">Schließen</button>
+    </div>
+
+    <div id="confirm-popup" class="popup">
+        <h2>Bestätigung</h2>
+        <p id="confirm-message"></p>
+        <button type="button" onclick="confirmChangeStatus()">Ja</button>
+        <button type="button" onclick="closeConfirmPopup()">Nein</button>
+    </div>
+
+    <div id="edit-wkz-model-popup" class="popup">
+        <h2>WKZ-Modell bearbeiten</h2>
+        <form id="edit-wkz-form">
+            <label for="edit-manufacturer">Herstellername:</label>
+            <input type="text" id="edit-manufacturer" name="edit-manufacturer" readonly><br><br>
+            
+            <label for="edit-year">Jahr:</label>
+            <input type="number" id="edit-year" name="edit-year" readonly><br><br>
+            
+            <label for="edit-period_type">Art des WKZ:</label>
+            <select id="edit-period_type" name="edit-period_type" onchange="toggleEditQuarterSelection()">
+                <option value="yearly">Jährlich</option>
+                <option value="quarterly">Quartalsweise</option>
+                <option value="special">Sonstiges</option>
+            </select><br><br>
+
+            <div id="edit-quarter-selection" style="display:none;">
+                <label for="edit-quarter">Quartal:</label>
+                <select id="edit-quarter" name="edit-quarter">
+                    <option value="Q1">Q1</option>
+                    <option value="Q2">Q2</option>
+                    <option value="Q3">Q3</option>
+                    <option value="Q4">Q4</option>
+                </select><br><br>
+            </div>
+
+            <div id="edit-wkz-name-container" style="display:none;">
+                <label for="edit-wkz_name">Bezeichnung des WKZ:</label>
+                <input type="text" id="edit-wkz_name" name="edit-wkz_name"><br><br>
+            </div>
+
+            <label for="edit-period_value">WKZ Betrag:</label>
+            <input type="number" id="edit-period_value" name="edit-period_value" required><br><br>
+            
+            <button type="button" onclick="saveWkzModel()">Speichern</button>
+            <button type="button" onclick="closeEditWkzModelPopup()">Schließen</button>
+        </form>
+    </div>
+
+    <div id="delete-confirm-popup" class="popup">
+        <h2>Bestätigung</h2>
+        <p id="delete-confirm-message"></p>
+        <button type="button" onclick="confirmDeleteWkzModel()">Ja</button>
+        <button type="button" onclick="closeDeleteConfirmPopup()">Nein</button>
+    </div>
+
+    <div id="notes-popup" class="popup">
+        <h2>Notizen</h2>
+        <textarea id="notes-textarea" rows="10" cols="30"></textarea><br><br>
+        <button type="button" onclick="saveNotes()">Speichern</button>
+        <button type="button" onclick="closeNotesPopup()">Schließen</button>
+    </div>
 </body>
 </html>
 
