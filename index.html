@@ -357,7 +357,7 @@
                 <label for="edit-quarter">Quartal:</label>
                 <select id="edit-quarter" name="edit-quarter">
                     <option value="Q1">Q1</option>
-                    <option value="Q2">Q2"></option>
+                    <option value="Q2">Q2</option>
                     <option value="Q3">Q3</option>
                     <option value="Q4">Q4</option>
                 </select><br><br>
@@ -486,7 +486,7 @@
                 document.getElementById('wkz-entry-form').reset();
                 fetchWkzEntries();
                 updateWkzTable();
-                updateWkzOverviewTable();
+                updateWkzOverviewTable(); // Ensure the overview is updated
             } catch (error) {
                 console.error("Error adding WKZ entry: ", error);
             }
@@ -549,6 +549,7 @@
                 });
                 alert('WKZ Modell erfolgreich gelöscht!');
                 fetchWkzData();
+                updateWkzOverviewTable(); // Ensure the overview is updated
             } catch (error) {
                 console.error("Error deleting WKZ model: ", error);
             }
@@ -560,7 +561,7 @@
                 alert('Leistung erfolgreich gelöscht!');
                 fetchWkzEntries();
                 updateWkzTable();
-                updateWkzOverviewTable();
+                updateWkzOverviewTable(); // Ensure the overview is updated
             } catch (error) {
                 console.error("Error deleting WKZ entry: ", error);
             }
@@ -1224,8 +1225,5 @@
     </script>
 </body>
 </html>
-
-</html>
-
 
 
