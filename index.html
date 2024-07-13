@@ -124,11 +124,13 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-firestore.js"></script>
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
     <script>
-        const firebaseConfig = {
+        // Your web app's Firebase configuration
+        var firebaseConfig = {
             apiKey: "AIzaSyDEBclnXkB0kenNN9pXnvitcR2pWbRPozU",
             authDomain: "wkz-verwaltung.firebaseapp.com",
             projectId: "wkz-verwaltung",
@@ -138,10 +140,11 @@
             measurementId: "G-BYQRY9S3M9"
         };
         // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore(app);
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
 
-        // Add WKZ to Firestore
+        let wkzEntries = [];
+
         function addWkz() {
             const manufacturerName = document.getElementById('manufacturer_name').value;
             const year = document.getElementById('year').value;
@@ -155,100 +158,83 @@
                 return;
             }
 
-            db.collection('wkz').add({
-                manufacturerName,
-                year,
-                periodType,
-                wkzName,
-                periodValue,
-                quarter
+            // Speichern in Firestore
+            db.collection("wkzEntries").doc("TcCxQOk1JPzAGb7cr9ci").set({
+                manufacturer: manufacturerName,
+                year: year,
+                periodType: periodType,
+                wkzName: wkzName,
+                periodValue: periodValue,
+                quarter: quarter
             }).then(() => {
                 alert('WKZ erfolgreich eingetragen!');
                 document.getElementById('wkz-form').reset();
                 toggleQuarterSelection();
-                fetchWkzEntries();
-            }).catch(error => {
-                console.error('Error adding document: ', error);
+                fetchWkzEntries(); // Aktualisieren Sie die Liste der WKZ-Einträge
+            }).catch((error) => {
+                console.error("Fehler beim Hinzufügen des WKZ: ", error);
             });
         }
 
-        // Fetch WKZ Entries from Firestore
         function fetchWkzEntries() {
-            db.collection('wkz').get().then(querySnapshot => {
-                wkzEntries = querySnapshot.docs.map(doc => doc.data());
-                updateWkzTable();
-                updateWkzOverviewTable();
-                updateManufacturerSuggestions();
-            }).catch(error => {
-                console.error('Error fetching documents: ', error);
+            db.collection("wkzEntries").doc("QjZq3rpEamt5iaaGFJW8").get().then((doc) => {
+                if (doc.exists) {
+                    wkzEntries = [doc.data()];
+                    updateWkzTable();
+                } else {
+                    console.log("Keine Daten gefunden");
+                }
+            }).catch((error) => {
+                console.error("Fehler beim Abrufen der WKZ-Einträge: ", error);
             });
         }
 
-        // Update WKZ Table
-        function updateWkzTable(filteredEntries = null, page = 1) {
+        function updateWkzTable() {
             const wkzTableBody = document.querySelector('#wkz-table tbody');
             wkzTableBody.innerHTML = '';
 
-            const entries = filteredEntries || wkzEntries;
-
-            const entriesPerPage = parseInt(document.getElementById('entries_per_page').value);
-            const startIndex = (page - 1) * entriesPerPage;
-            const endIndex = startIndex + entriesPerPage;
-            const paginatedEntries = entries.slice(startIndex, endIndex);
-
-            paginatedEntries.forEach(entry => {
-                const notesClass = entry.notes ? 'yellow' : '';
+            wkzEntries.forEach(entry => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${entry.manufacturerName}</td>
+                    <td>${entry.manufacturer}</td>
                     <td>${entry.year}</td>
                     <td>${entry.periodType === 'yearly' ? 'Jährlich' : entry.quarter}</td>
                     <td>${entry.wkzName}</td>
-                    <td>${entry.title}</td>
-                    <td>${entry.date}</td>
-                    <td>${entry.amount ? entry.amount.toFixed(2) : ''} €</td>
-                    <td class="${entry.paymentStatus === 'unpaid' ? 'unpaid' : 'paid'}">${entry.paymentStatus === 'unpaid' ? 'Nein' : 'Ja'}</td>
-                    <td>${entry.paymentMethod}</td>
-                    <td>
-                        <button class="icon-button" title="Rechnung bezahlt" onclick="showConfirmPopup(this, '${entry.manufacturerName}', '${entry.date}')"><i class="fas fa-euro-sign"></i></button>
-                        <button class="icon-button" title="Löschen" onclick="confirmDeleteWkzEntry(this)"><i class="fas fa-trash"></i></button>
-                        <button class="icon-button" title="Bearbeiten" onclick="editWkzEntry(this, ${wkzEntries.indexOf(entry)})"><i class="fas fa-edit"></i></button>
-                        <button class="icon-button info-button ${notesClass}" title="Notizen" onclick="showNotesPopup(this, ${wkzEntries.indexOf(entry)})"><i class="fas fa-info-circle"></i></button>
-                    </td>
+                    <td>${entry.periodValue.toFixed(2)} €</td>
+                    <td><button class="icon-button" title="Löschen" onclick="deleteWkzEntry('TcCxQOk1JPzAGb7cr9ci')"><i class="fas fa-trash"></i></button></td>
                 `;
                 wkzTableBody.appendChild(row);
             });
-
-            updatePagination(entries.length, page);
         }
 
-        // Update Pagination
-        function updatePagination(totalEntries, currentPage) {
-            const pagination = document.getElementById('pagination');
-            pagination.innerHTML = '';
-
-            const entriesPerPage = parseInt(document.getElementById('entries_per_page').value);
-            const totalPages = Math.ceil(totalEntries / entriesPerPage);
-
-            for (let i = 1; i <= totalPages; i++) {
-                const pageLink = document.createElement('button');
-                pageLink.textContent = i;
-                if (i === currentPage) {
-                    pageLink.disabled = true;
-                } else {
-                    pageLink.addEventListener('click', () => updateWkzTable(wkzEntries, i));
-                }
-                pagination.appendChild(pageLink);
-            }
+        function deleteWkzEntry(id) {
+            db.collection("wkzEntries").doc(id).delete().then(() => {
+                alert('WKZ erfolgreich gelöscht!');
+                fetchWkzEntries(); // Aktualisieren Sie die Liste der WKZ-Einträge
+            }).catch((error) => {
+                console.error("Fehler beim Löschen des WKZ: ", error);
+            });
         }
 
-        // Call fetchWkzEntries on page load
-        $(document).ready(function() {
+        document.addEventListener('DOMContentLoaded', function () {
             fetchWkzEntries();
         });
 
-        // Other existing JavaScript functions
-        // ...
+        function toggleQuarterSelection() {
+            const periodType = document.getElementById('period_type').value;
+            const quarterSelection = document.getElementById('quarter-selection');
+            const wkzNameContainer = document.getElementById('wkz-name-container');
+            if (periodType === 'quarterly') {
+                quarterSelection.style.display = 'block';
+                wkzNameContainer.style.display = 'none';
+            } else if (periodType === 'special') {
+                quarterSelection.style.display = 'none';
+                wkzNameContainer.style.display = 'block';
+            } else {
+                quarterSelection.style.display = 'none';
+                wkzNameContainer.style.display = 'none';
+            }
+        }
     </script>
 </head>
 <body>
