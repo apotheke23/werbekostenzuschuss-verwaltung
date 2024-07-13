@@ -545,6 +545,7 @@
                     .get();
                 
                 snapshot.forEach(doc => {
+                    console.log("Deleting document:", doc.id); // Debug log
                     doc.ref.delete();
                 });
                 alert('WKZ Modell erfolgreich gelöscht!');
@@ -1225,5 +1226,4 @@
     </script>
 </body>
 </html>
-
 
