@@ -536,18 +536,37 @@
 
         async function deleteWkzModel(manufacturer, year, type, name, quarter) {
             try {
-                const snapshot = await db.collection('addWkz')
+                console.log("Attempting to delete model with the following details:");
+                console.log("Manufacturer:", manufacturer);
+                console.log("Year:", year);
+                console.log("Type:", type);
+                console.log("Name:", name);
+                console.log("Quarter:", quarter);
+
+                let query = db.collection('addWkz')
                     .where('manufacturerName', '==', manufacturer)
                     .where('year', '==', year)
                     .where('periodType', '==', type)
-                    .where('wkzName', '==', name)
-                    .where('quarter', '==', quarter)
-                    .get();
-                
+                    .where('wkzName', '==', name);
+
+                if (type === 'quarterly') {
+                    query = query.where('quarter', '==', quarter);
+                } else {
+                    query = query.where('quarter', '==', null);
+                }
+
+                const snapshot = await query.get();
+
+                if (snapshot.empty) {
+                    console.log("No matching documents found to delete.");
+                    return;
+                }
+
                 snapshot.forEach(doc => {
-                    console.log("Deleting document:", doc.id); // Debug log
+                    console.log("Deleting document ID:", doc.id);
                     doc.ref.delete();
                 });
+
                 alert('WKZ Modell erfolgreich gelöscht!');
                 fetchWkzData();
                 updateWkzOverviewTable(); // Ensure the overview is updated
@@ -1225,5 +1244,7 @@
         fetchWkzEntries();
     </script>
 </body>
+</html>
+
 </html>
 
