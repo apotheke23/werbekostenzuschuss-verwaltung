@@ -358,7 +358,7 @@
                 <select id="edit-quarter" name="edit-quarter">
                     <option value="Q1">Q1</option>
                     <option value="Q2">Q2</option>
-                    <option value="Q3">Q3">Q3</option>
+                    <option value="Q3">Q3"></option>
                     <option value="Q4">Q4</option>
                 </select><br><br>
             </div>
@@ -438,7 +438,8 @@
             };
 
             try {
-                await db.collection('addWkz').add(wkz);
+                const docRef = await db.collection('addWkz').add(wkz);
+                wkz.id = docRef.id; // Add the ID to the local data
                 alert('WKZ erfolgreich eingetragen!');
                 document.getElementById('wkz-form').reset();
                 toggleQuarterSelection();
@@ -479,7 +480,8 @@
             };
 
             try {
-                await db.collection('fetchWkzEntries').add(entry);
+                const docRef = await db.collection('fetchWkzEntries').add(entry);
+                entry.id = docRef.id; // Add the ID to the local data
                 alert('Leistung erfolgreich eingetragen!');
                 document.getElementById('wkz-entry-form').reset();
                 fetchWkzEntries();
@@ -493,8 +495,10 @@
         async function fetchWkzData() {
             try {
                 const snapshot = await db.collection('addWkz').get();
+                wkzData = {};
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    data.id = doc.id; // Save the document ID
                     const { manufacturerName, year, periodType, periodValue, quarter, wkzName } = data;
                     if (!wkzData[manufacturerName]) {
                         wkzData[manufacturerName] = {};
@@ -502,7 +506,7 @@
                     if (!wkzData[manufacturerName][year]) {
                         wkzData[manufacturerName][year] = [];
                     }
-                    wkzData[manufacturerName][year].push({ type: periodType, value: periodValue, quarter, name: wkzName });
+                    wkzData[manufacturerName][year].push({ type: periodType, value: periodValue, quarter, name: wkzName, id: data.id });
                 });
                 updateManufacturerFilter();
                 updateWkzSelect();
@@ -519,6 +523,7 @@
                 wkzEntries = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    data.id = doc.id; // Save the document ID
                     wkzEntries.push(data);
                     paymentStatuses[data.manufacturerName + data.entryDate] = data.paymentStatus;
                 });
@@ -545,6 +550,18 @@
                 fetchWkzData();
             } catch (error) {
                 console.error("Error deleting WKZ model: ", error);
+            }
+        }
+
+        async function deleteWkzEntry(id) {
+            try {
+                await db.collection('fetchWkzEntries').doc(id).delete();
+                alert('Leistung erfolgreich gelöscht!');
+                fetchWkzEntries();
+                updateWkzTable();
+                updateWkzOverviewTable();
+            } catch (error) {
+                console.error("Error deleting WKZ entry: ", error);
             }
         }
 
@@ -664,10 +681,7 @@
         async function confirmDeleteWkzEntry(button, id) {
             if (confirm("Sicher, dass Sie die Eintragung löschen wollen?")) {
                 try {
-                    await db.collection('fetchWkzEntries').doc(id).delete();
-                    fetchWkzEntries();
-                    updateWkzTable();
-                    updateWkzOverviewTable();
+                    await deleteWkzEntry(id);
                 } catch (error) {
                     console.error("Error deleting WKZ entry: ", error);
                 }
@@ -1020,7 +1034,7 @@
                             <td>${wkz.quarter || ''}</td>
                             <td>
                                 <button class="icon-button" title="Bearbeiten" onclick="editWkzModel('${manufacturer}', '${year}', '${wkz.type}', '${wkz.name}', '${wkz.quarter || ''}', ${wkz.value})"><i class="fas fa-edit"></i></button>
-                                <button class="icon-button" title="Löschen" onclick="showDeleteConfirmPopup('${manufacturer}', '${year}', '${wkz.type}', '${wkz.name}', '${wkz.quarter || ''}')"><i class="fas fa-trash"></i></button>
+                                <button class="icon-button" title="Löschen" onclick="showDeleteConfirmPopup('${manufacturer}', '${year}', '${wkz.type}', '${wkz.name}', '${wkz.quarter || ''}', '${wkz.id}')"><i class="fas fa-trash"></i></button>
                             </td>`;
                         editTableBody.appendChild(row);
                     });
@@ -1066,14 +1080,14 @@
             editingMode = true;
         }
 
-        function showDeleteConfirmPopup(manufacturer, year, type, name, quarter) {
-            currentEditModel = { manufacturer, year, type, name, quarter };
+        function showDeleteConfirmPopup(manufacturer, year, type, name, quarter, id) {
+            currentEditModel = { manufacturer, year, type, name, quarter, id };
             document.getElementById('delete-confirm-message').textContent = "Sind Sie sicher, dass Sie dieses WKZ-Modell löschen möchten?";
             document.getElementById('delete-confirm-popup').classList.add('active');
         }
 
         function confirmDeleteWkzModel() {
-            const { manufacturer, year, type, name, quarter } = currentEditModel;
+            const { manufacturer, year, type, name, quarter, id } = currentEditModel;
 
             deleteWkzModel(manufacturer, year, type, name, quarter);
             closeDeleteConfirmPopup();
@@ -1209,7 +1223,6 @@
     </script>
 </body>
 </html>
-
 
 
 
