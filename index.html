@@ -415,7 +415,7 @@
         let currentNotesTarget = null;
         let editingMode = false;
 
-        function addWkz() {
+        async function addWkz() {
             const manufacturerName = document.getElementById('manufacturer_name').value;
             const year = document.getElementById('year').value;
             const periodType = document.getElementById('period_type').value;
@@ -437,21 +437,20 @@
                 quarter
             };
 
-            // Add WKZ to Firestore
-            db.collection('addWkz').add(wkz)
-                .then(() => {
-                    alert('WKZ erfolgreich eingetragen!');
-                    document.getElementById('wkz-form').reset();
-                    toggleQuarterSelection();
-                    updateWkzOverviewTable();
-                    updateManufacturerSuggestions();
-                })
-                .catch(error => {
-                    console.error("Error adding WKZ: ", error);
-                });
+            try {
+                await db.collection('addWkz').add(wkz);
+                alert('WKZ erfolgreich eingetragen!');
+                document.getElementById('wkz-form').reset();
+                toggleQuarterSelection();
+                updateWkzOverviewTable();
+                updateManufacturerSuggestions();
+                fetchWkzData();
+            } catch (error) {
+                console.error("Error adding WKZ: ", error);
+            }
         }
 
-        function addWkzEntry() {
+        async function addWkzEntry() {
             const manufacturer = document.getElementById('manufacturer').value;
             const wkzSelect = document.getElementById('wkz_select').value;
             const [wkzName, year, periodType, quarter] = wkzSelect.split(' - ');
@@ -479,17 +478,54 @@
                 quarter: periodType === 'quarterly' ? quarter : null
             };
 
-            // Add WKZ Entry to Firestore
-            db.collection('fetchWkzEntries').add(entry)
-                .then(() => {
-                    alert('Leistung erfolgreich eingetragen!');
-                    document.getElementById('wkz-entry-form').reset();
-                    updateWkzTable();
-                    updateWkzOverviewTable();
-                })
-                .catch(error => {
-                    console.error("Error adding WKZ entry: ", error);
+            try {
+                await db.collection('fetchWkzEntries').add(entry);
+                alert('Leistung erfolgreich eingetragen!');
+                document.getElementById('wkz-entry-form').reset();
+                fetchWkzEntries();
+                updateWkzTable();
+                updateWkzOverviewTable();
+            } catch (error) {
+                console.error("Error adding WKZ entry: ", error);
+            }
+        }
+
+        async function fetchWkzData() {
+            try {
+                const snapshot = await db.collection('addWkz').get();
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const { manufacturerName, year, periodType, periodValue, quarter, wkzName } = data;
+                    if (!wkzData[manufacturerName]) {
+                        wkzData[manufacturerName] = {};
+                    }
+                    if (!wkzData[manufacturerName][year]) {
+                        wkzData[manufacturerName][year] = [];
+                    }
+                    wkzData[manufacturerName][year].push({ type: periodType, value: periodValue, quarter, name: wkzName });
                 });
+                updateManufacturerFilter();
+                updateWkzSelect();
+                updateManufacturerSuggestions();
+                updateWkzOverviewTable();
+            } catch (error) {
+                console.error("Error fetching WKZ data: ", error);
+            }
+        }
+
+        async function fetchWkzEntries() {
+            try {
+                const snapshot = await db.collection('fetchWkzEntries').get();
+                wkzEntries = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    wkzEntries.push(data);
+                    paymentStatuses[data.manufacturerName + data.entryDate] = data.paymentStatus;
+                });
+                updateWkzTable();
+            } catch (error) {
+                console.error("Error fetching WKZ entries: ", error);
+            }
         }
 
         function updateManufacturerFilter() {
@@ -1217,12 +1253,11 @@
             });
         }
 
-        updateManufacturerFilter();
-        updateWkzTable();
-        updateWkzOverviewTable();
-        updateManufacturerSuggestions();
+        fetchWkzData();
+        fetchWkzEntries();
     </script>
 </body>
 </html>
+
 
 
