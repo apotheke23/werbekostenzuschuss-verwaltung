@@ -562,14 +562,18 @@
                     return;
                 }
 
+                const deletePromises = [];
                 snapshot.forEach(doc => {
                     console.log("Deleting document ID:", doc.id);
-                    doc.ref.delete();
+                    deletePromises.push(doc.ref.delete());
                 });
+
+                await Promise.all(deletePromises);
 
                 alert('WKZ Modell erfolgreich gelöscht!');
                 fetchWkzData();
                 updateWkzOverviewTable(); // Ensure the overview is updated
+                showEditPopup(); // Refresh the edit popup to reflect changes
             } catch (error) {
                 console.error("Error deleting WKZ model: ", error);
             }
@@ -1113,11 +1117,13 @@
 
             deleteWkzModel(manufacturer, year, type, name, quarter);
             closeDeleteConfirmPopup();
-            showEditPopup();
+            fetchWkzData(); // Refresh the WKZ data after deletion
+            showEditPopup(); // Refresh the edit popup to reflect changes
         }
 
         function closeDeleteConfirmPopup() {
-            document.getElementById('delete-confirm-popup').classList.remove('active');
+            const popup = document.getElementById('delete-confirm-popup');
+            popup.classList.remove('active');
         }
 
         function searchWkzModels() {
@@ -1246,5 +1252,4 @@
 </body>
 </html>
 
-</html>
 
