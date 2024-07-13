@@ -528,6 +528,26 @@
             }
         }
 
+        async function deleteWkzModel(manufacturer, year, type, name, quarter) {
+            try {
+                const snapshot = await db.collection('addWkz')
+                    .where('manufacturerName', '==', manufacturer)
+                    .where('year', '==', year)
+                    .where('periodType', '==', type)
+                    .where('wkzName', '==', name)
+                    .where('quarter', '==', quarter)
+                    .get();
+                
+                snapshot.forEach(doc => {
+                    doc.ref.delete();
+                });
+                alert('WKZ Modell erfolgreich gelöscht!');
+                fetchWkzData();
+            } catch (error) {
+                console.error("Error deleting WKZ model: ", error);
+            }
+        }
+
         function updateManufacturerFilter() {
             const manufacturerSelect = document.getElementById('manufacturer');
             const manufacturerFilter = document.getElementById('wkz_filter_manufacturer');
@@ -597,7 +617,7 @@
                     <td>${entry.paymentMethod}</td>
                     <td>
                         <button class="icon-button" title="Rechnung bezahlt" onclick="showConfirmPopup(this, '${entry.manufacturerName}', '${entry.entryDate}')"><i class="fas fa-euro-sign"></i></button>
-                        <button class="icon-button" title="Löschen" onclick="confirmDeleteWkzEntry(this)"><i class="fas fa-trash"></i></button>
+                        <button class="icon-button" title="Löschen" onclick="confirmDeleteWkzEntry(this, '${entry.id}')"><i class="fas fa-trash"></i></button>
                         <button class="icon-button" title="Bearbeiten" onclick="editWkzEntry(this, ${wkzEntries.indexOf(entry)})"><i class="fas fa-edit"></i></button>
                         <button class="icon-button info-button ${notesClass}" title="Notizen" onclick="showNotesPopup(this, ${wkzEntries.indexOf(entry)})"><i class="fas fa-info-circle"></i></button>
                     </td>`;
@@ -637,83 +657,21 @@
             const entry = wkzEntries.find(entry => entry.manufacturerName === manufacturer && entry.entryDate === date);
             if (entry) {
                 entry.paymentStatus = newStatus;
+                db.collection('fetchWkzEntries').doc(entry.id).update({ paymentStatus: newStatus });
             }
         }
 
-        function confirmDeleteWkzEntry(button) {
+        async function confirmDeleteWkzEntry(button, id) {
             if (confirm("Sicher, dass Sie die Eintragung löschen wollen?")) {
-                deleteWkzEntry(button);
+                try {
+                    await db.collection('fetchWkzEntries').doc(id).delete();
+                    fetchWkzEntries();
+                    updateWkzTable();
+                    updateWkzOverviewTable();
+                } catch (error) {
+                    console.error("Error deleting WKZ entry: ", error);
+                }
             }
-        }
-
-        function deleteWkzEntry(button) {
-            const row = button.parentElement.parentElement;
-            const cells = row.children;
-            const manufacturer = cells[0].textContent;
-            const year = cells[1].textContent;
-            const periodType = cells[2].textContent === 'Jährlich' ? 'yearly' : cells[2].textContent;
-            const wkzName = cells[3].textContent;
-            const title = cells[4].textContent;
-            const date = cells[5].textContent;
-            const amount = parseFloat(cells[6].textContent);
-
-            const entryIndex = wkzEntries.findIndex(entry =>
-                entry.manufacturerName === manufacturer &&
-                entry.year === year &&
-                entry.periodType === periodType &&
-                entry.wkzName === wkzName &&
-                entry.entryTitle === title &&
-                entry.entryDate === date &&
-                entry.entryAmount === amount
-            );
-
-            const deletedEntry = wkzEntries.splice(entryIndex, 1)[0];
-            archivedWkzEntries.push(deletedEntry);
-
-            row.remove();
-            updateWkzTable();
-            updateWkzOverviewTable();
-            updateArchive();
-        }
-
-        function updateArchive() {
-            const archive = document.getElementById('archive');
-            archive.innerHTML = '';
-
-            archivedWkzEntries.forEach((entry, index) => {
-                const archiveRow = document.createElement('div');
-                archiveRow.innerHTML = 
-                    `${entry.manufacturerName} (${entry.year}) - ${entry.wkzName} - ${entry.entryTitle} 
-                    <span class="archive-link" onclick="restoreWkzEntry(${index})">Wiederherstellen</span>`;
-                archive.appendChild(archiveRow);
-            });
-        }
-
-        function restoreWkzEntry(index) {
-            const entry = archivedWkzEntries.splice(index, 1)[0];
-            wkzEntries.push(entry);
-
-            updateWkzTable();
-            updateWkzOverviewTable();
-            updateArchive();
-        }
-
-        function filterWkzEntries() {
-            const year = document.getElementById('wkz_filter_year').value;
-            const manufacturer = document.getElementById('wkz_filter_manufacturer').value;
-
-            const filteredEntries = wkzEntries.filter(entry =>
-                entry.year === year && (manufacturer === 'all' || entry.manufacturerName === manufacturer)
-            );
-
-            updateWkzTable(filteredEntries);
-        }
-
-        function resetWkzFilter() {
-            document.getElementById('wkz_filter_year').value = '2024';
-            document.getElementById('wkz_filter_manufacturer').value = 'all';
-            document.getElementById('entries_per_page').value = '10';
-            updateWkzTable();
         }
 
         function updatePagination(totalEntries, currentPage) {
@@ -1117,14 +1075,7 @@
         function confirmDeleteWkzModel() {
             const { manufacturer, year, type, name, quarter } = currentEditModel;
 
-            const wkzList = wkzData[manufacturer][year];
-            const wkzIndex = wkzList.findIndex(wkz => wkz.type === type && wkz.name === name && wkz.quarter === quarter);
-
-            if (wkzIndex !== -1) {
-                wkzList.splice(wkzIndex, 1);
-            }
-
-            updateWkzOverviewTable();
+            deleteWkzModel(manufacturer, year, type, name, quarter);
             closeDeleteConfirmPopup();
             showEditPopup();
         }
