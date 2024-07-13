@@ -5,237 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Werbekostenzuschuss Verwaltung</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .tabs {
-            display: flex;
-            cursor: pointer;
-        }
-        .tab {
-            flex: 1;
-            padding: 10px;
-            text-align: center;
-            background-color: #f1f1f1;
-            border: 1px solid #ccc;
-        }
-        .tab.active {
-            background-color: #ccc;
-        }
-        .tab-content {
-            display: none;
-            padding: 20px;
-            border-top: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        table, th, td {
-            border: 1px solid black;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-        .unpaid {
-            background-color: red;
-        }
-        .paid {
-            background-color: green;
-        }
-        .blue {
-            color: blue;
-        }
-        .red {
-            color: red;
-        }
-        .green {
-            color: green;
-        }
-        .toggle-row {
-            cursor: pointer;
-            color: blue;
-            text-decoration: underline;
-        }
-        .hidden-row {
-            display: none;
-        }
-        .form-container {
-            display: flex;
-            justify-content: space-between;
-        }
-        .form-column {
-            width: 45%;
-        }
-        .icon-button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            margin: 0 5px;
-            color: blue;
-            display: inline-flex;
-            align-items: center;
-            font-size: 1.2em;
-        }
-        .icon-button:hover {
-            color: lightblue;
-        }
-        .icon-button:focus {
-            outline: none;
-        }
-        .popup {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 1px solid black;
-            padding: 20px;
-            background-color: white;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-        }
-        .popup.active {
-            display: block;
-        }
-        .highlight {
-            border: 2px solid red;
-        }
-        .info-button {
-            background-color: blue;
-            border: none;
-            border-radius: 21px;
-            color: white;
-            font-size: 1em;
-            padding: 0.2em 0.5em;
-            cursor: pointer;
-        }
-        .info-button:hover {
-            background-color: lightblue;
-        }
-        .info-button.yellow {
-            background-color: yellow;
-            color: black;
-        }
+        /* Ihr bestehender CSS-Code */
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
-    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
-    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <!-- Firebase App (core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <!-- Add Firebase products that you want to use -->
-    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
-    <script>
-        // Your web app's Firebase configuration
-        var firebaseConfig = {
-            apiKey: "AIzaSyDEBclnXkB0kenNN9pXnvitcR2pWbRPozU",
-            authDomain: "wkz-verwaltung.firebaseapp.com",
-            projectId: "wkz-verwaltung",
-            storageBucket: "wkz-verwaltung.appspot.com",
-            messagingSenderId: "401333744873",
-            appId: "1:401333744873:web:3f93295e18c15e99bb2c78",
-            measurementId: "G-BYQRY9S3M9"
-        };
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        var db = firebase.firestore();
-
-        let wkzEntries = [];
-
-        function addWkz() {
-            const manufacturerName = document.getElementById('manufacturer_name').value;
-            const year = document.getElementById('year').value;
-            const periodType = document.getElementById('period_type').value;
-            const wkzName = periodType === 'special' ? document.getElementById('wkz_name').value : '';
-            const periodValue = parseFloat(document.getElementById('period_value').value);
-            const quarter = periodType === 'quarterly' ? document.getElementById('quarter').value : null;
-
-            if (!manufacturerName || !year || !periodType || !periodValue || (periodType === 'special' && !wkzName)) {
-                alert("Bitte füllen Sie alle Pflichtfelder aus.");
-                return;
-            }
-
-            // Speichern in Firestore
-            db.collection("wkzEntries").doc("TcCxQOk1JPzAGb7cr9ci").set({
-                manufacturer: manufacturerName,
-                year: year,
-                periodType: periodType,
-                wkzName: wkzName,
-                periodValue: periodValue,
-                quarter: quarter
-            }).then(() => {
-                alert('WKZ erfolgreich eingetragen!');
-                document.getElementById('wkz-form').reset();
-                toggleQuarterSelection();
-                fetchWkzEntries(); // Aktualisieren Sie die Liste der WKZ-Einträge
-            }).catch((error) => {
-                console.error("Fehler beim Hinzufügen des WKZ: ", error);
-            });
-        }
-
-        function fetchWkzEntries() {
-            db.collection("wkzEntries").doc("QjZq3rpEamt5iaaGFJW8").get().then((doc) => {
-                if (doc.exists) {
-                    wkzEntries = [doc.data()];
-                    updateWkzTable();
-                } else {
-                    console.log("Keine Daten gefunden");
-                }
-            }).catch((error) => {
-                console.error("Fehler beim Abrufen der WKZ-Einträge: ", error);
-            });
-        }
-
-        function updateWkzTable() {
-            const wkzTableBody = document.querySelector('#wkz-table tbody');
-            wkzTableBody.innerHTML = '';
-
-            wkzEntries.forEach(entry => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${entry.manufacturer}</td>
-                    <td>${entry.year}</td>
-                    <td>${entry.periodType === 'yearly' ? 'Jährlich' : entry.quarter}</td>
-                    <td>${entry.wkzName}</td>
-                    <td>${entry.periodValue.toFixed(2)} €</td>
-                    <td><button class="icon-button" title="Löschen" onclick="deleteWkzEntry('TcCxQOk1JPzAGb7cr9ci')"><i class="fas fa-trash"></i></button></td>
-                `;
-                wkzTableBody.appendChild(row);
-            });
-        }
-
-        function deleteWkzEntry(id) {
-            db.collection("wkzEntries").doc(id).delete().then(() => {
-                alert('WKZ erfolgreich gelöscht!');
-                fetchWkzEntries(); // Aktualisieren Sie die Liste der WKZ-Einträge
-            }).catch((error) => {
-                console.error("Fehler beim Löschen des WKZ: ", error);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            fetchWkzEntries();
-        });
-
-        function toggleQuarterSelection() {
-            const periodType = document.getElementById('period_type').value;
-            const quarterSelection = document.getElementById('quarter-selection');
-            const wkzNameContainer = document.getElementById('wkz-name-container');
-            if (periodType === 'quarterly') {
-                quarterSelection.style.display = 'block';
-                wkzNameContainer.style.display = 'none';
-            } else if (periodType === 'special') {
-                quarterSelection.style.display = 'none';
-                wkzNameContainer.style.display = 'block';
-            } else {
-                quarterSelection.style.display = 'none';
-                wkzNameContainer.style.display = 'none';
-            }
-        }
-    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <h1>Werbekostenzuschuss Verwaltung</h1>
@@ -501,15 +279,39 @@
     </div>
 
     <script>
-        let wkzData = {};
-        let wkzEntries = [];
-        let archivedWkzEntries = [];
-        let paymentStatuses = {};
-        let currentEntry = null;
-        let currentEditModel = null;
-        let currentNotesTarget = null;
-        let editingMode = false;
+        // Firebase-Konfiguration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDEBclnXkB0kenNN9pXnvitcR2pWbRPozU",
+            authDomain: "wkz-verwaltung.firebaseapp.com",
+            projectId: "wkz-verwaltung",
+            storageBucket: "wkz-verwaltung.appspot.com",
+            messagingSenderId: "401333744873",
+            appId: "1:401333744873:web:3f93295e18c15e99bb2c78",
+            measurementId: "G-BYQRY9S3M9"
+        };
 
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Daten abrufen
+        function fetchWkzEntries() {
+            db.collection("wkzEntries").doc("QjZq3rpEamt5iaaGFJW8")
+                .get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        wkzEntries = doc.data().entries;
+                        updateWkzTable();
+                    } else {
+                        console.error("No such document!");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error getting document:", error);
+                });
+        }
+
+        // Daten speichern
         function addWkz() {
             const manufacturerName = document.getElementById('manufacturer_name').value;
             const year = document.getElementById('year').value;
@@ -553,14 +355,33 @@
                 });
             }
 
+            db.collection("wkzEntries").doc("TcCxQOk1JPzAGb7cr9ci").set({
+                entries: wkzEntries
+            })
+            .then(() => {
+                console.log("Document successfully written!");
+                updateWkzTable();
+                alert('WKZ erfolgreich eingetragen!');
+            })
+            .catch((error) => {
+                console.error("Error writing document: ", error);
+            });
+
             updateManufacturerFilter();
             updateWkzSelect();
-            alert('WKZ erfolgreich eingetragen!');
             document.getElementById('wkz-form').reset();
             toggleQuarterSelection();
             updateWkzOverviewTable();
             updateManufacturerSuggestions();
         }
+
+        let wkzEntries = [];
+        let archivedWkzEntries = [];
+        let paymentStatuses = {};
+        let currentEntry = null;
+        let currentEditModel = null;
+        let currentNotesTarget = null;
+        let editingMode = false;
 
         function addWkzEntry() {
             const manufacturer = document.getElementById('manufacturer').value;
